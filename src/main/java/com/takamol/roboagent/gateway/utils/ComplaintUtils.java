@@ -1,0 +1,82 @@
+package com.takamol.roboagent.gateway.utils;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.RequestEntity;
+import org.springframework.http.ResponseEntity;
+
+import com.google.gson.Gson;
+import com.takamol.roboagent.gateway.models.UserVO;
+import com.takamol.roboagent.gateway.models.WebRequestBody;
+import com.takamol.roboagent.gateway.models.WebResponseBody;
+import com.takamol.roboagent.gateway.service.UserRepository;
+import com.mysql.cj.util.StringUtils;
+
+public class ComplaintUtils {
+
+	public static String checkUserValidation(UserVO user, UserRepository userRepository) {
+		String resultDesc = "";
+		user.generateFullName();
+		System.out.println("inCheckuser " + user.toString());
+		/*
+		 * ValidatorFactory factory = Validation.buildDefaultValidatorFactory();
+		 * Validator validator = factory.getValidator();
+		 * 
+		 * Set<ConstraintViolation<UserVO>> violations = validator.validate(user);
+		 * 
+		 * 
+		 * for (ConstraintViolation<UserVO> violation : violations) { resultDesc +=
+		 * violation.getMessage()+" --- "; }
+		 */
+		if (StringUtils.isEmptyOrWhitespaceOnly(user.getEmail())) {
+			resultDesc += " --- Email should not be Empity or Null !";
+		}
+		if (StringUtils.isEmptyOrWhitespaceOnly(user.getUserName())) {
+			resultDesc += " --- Password should not be Empity or Null !";
+		}
+		if (StringUtils.isEmptyOrWhitespaceOnly(user.getFullName())) {
+			resultDesc += " --- Name should not be Empity or Null !";
+		}
+		if (!StringUtils.isEmptyOrWhitespaceOnly(resultDesc)) {
+			resultDesc = "Failed - Could not save the user " + resultDesc;
+			resultDesc.substring(0, resultDesc.length() - 4);// remove the last ---
+			return resultDesc;
+		} else {
+			resultDesc = userRepository.findByEmail(user.getEmail()) != null
+					? "Failed - Could not save the user --- Email Already Registered !"
+					: "";
+			return resultDesc;
+		}
+
+	}
+
+	public static ResponseEntity<String> responseGenerate(WebResponseBody responseBody) {
+		HttpHeaders responseHeaders = new HttpHeaders();
+		if (responseBody.getUser() != null) {
+			responseHeaders.set("Authorization", "Bearer " + JwtTokenUtil.generateToken(responseBody.getUser()));
+		}
+		if (StringUtils.isEmptyOrWhitespaceOnly(responseBody.getResult())) {
+			responseBody.setResult("-1");
+			responseBody.setResultDescription("Internal Error");
+		}
+		return ResponseEntity.ok().headers(responseHeaders).body(new Gson().toJson(responseBody));
+
+	}
+
+	public static RequestEntity<String> requestGenerate(WebRequestBody requestBody) {
+		HttpHeaders requestHeaders = new HttpHeaders();
+
+		return null;
+	}
+
+	public static String removeFirstandLast(String str) {
+
+		StringBuffer sb = new StringBuffer(str);
+		if (str.length() != 0) {
+			sb.deleteCharAt(0);
+			sb.deleteCharAt(sb.length() - 1);
+		}
+		return sb.toString();
+	}
+}
